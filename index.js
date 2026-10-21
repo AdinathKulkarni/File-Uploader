@@ -18,7 +18,7 @@ dbConnect.connect();
 cloudinary.cloudinaryConnect();
 
 //route mounting
-app.use('/api/v1/upload');
+app.use('/api/v1/upload', Upload);
 
 app.listen(PORT, () => {
     console.log(`App is running on port ${PORT}`);

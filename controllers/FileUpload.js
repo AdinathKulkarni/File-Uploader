@@ -32,7 +32,7 @@ const isFileTypeSupported = (type, supportedFileType) => {
 
 const uploadToCloud = (file) => new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-        { resource_type: 'image' },
+        { resource_type: 'auto' },
         (error, result) => {
             if (error) {
                 reject(error);
@@ -99,6 +99,62 @@ exports.imageUpload = async(req, res) => {
         return res.status(500).json({
             success: false,
             message: "Image not uploaded, Please try again !!",
+        });
+    }
+}
+
+exports.videoUpload = async(req, res) => {
+    try{
+        const {name, tags, email} = req.body;
+        const vidFile = req.files && req.files.videoFile;
+
+        if(typeof name !== 'string' || !name.trim()){
+            return res.status(400).json({
+                success: false,
+                message: "A name is required",
+            });
+        }
+
+        if(!vidFile || Array.isArray(vidFile) || !Buffer.isBuffer(vidFile.data) || vidFile.data.length === 0){
+            return res.status(400).json({
+                success: false,
+                message: "A video file is required",
+            });
+        }
+
+        //check if file is supported or not
+        const supportedFileType = ["mp4", "mov"];
+        const fileType = path.extname(vidFile.name).slice(1).toLowerCase();
+
+        if(!isFileTypeSupported(fileType, supportedFileType)){
+            return res.status(400).json({
+                success: false,
+                message: "File type not supported",
+            });
+        }
+
+        const uploadResult = await uploadToCloud(vidFile);
+        if(!uploadResult.secure_url){
+            throw new Error('Cloudinary returned no secure video URL');
+        }
+
+        const savedFile = await File.create({
+            name: name.trim(),
+            tags,
+            email,
+            vidUrl: uploadResult.secure_url,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Video uploaded successfully",
+            data: savedFile,
+        });
+    } catch(error){
+        console.error("Image upload failed:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Video not uploaded, Please try again !!",
         });
     }
 }
